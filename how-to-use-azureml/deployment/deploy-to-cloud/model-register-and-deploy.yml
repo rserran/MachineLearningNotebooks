@@ -1,4 +1,4 @@
-name: train-remote
+name: model-register-and-deploy
 dependencies:
 - pip:
   - azureml-sdk
