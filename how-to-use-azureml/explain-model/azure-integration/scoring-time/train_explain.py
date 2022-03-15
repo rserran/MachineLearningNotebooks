@@ -5,18 +5,18 @@
 import os
 import pandas as pd
 import zipfile
+import joblib
+from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
-from sklearn.externals import joblib
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
-from sklearn_pandas import DataFrameMapper
 
 from azureml.core.run import Run
-from azureml.explain.model.tabular_explainer import TabularExplainer
-from azureml.contrib.explain.model.explanation.explanation_client import ExplanationClient
-from azureml.explain.model.scoring.scoring_explainer import LinearScoringExplainer, save
+from interpret.ext.blackbox import TabularExplainer
+from azureml.interpret import ExplanationClient
+from azureml.interpret.scoring.scoring_explainer import LinearScoringExplainer, save
 
 OUTPUT_DIR = './outputs/'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -57,16 +57,22 @@ for col, value in attritionXData.iteritems():
 # store the numerical columns
 numerical = attritionXData.columns.difference(categorical)
 
-numeric_transformations = [([f], Pipeline(steps=[
+# We create the preprocessing pipelines for both numeric and categorical data.
+numeric_transformer = Pipeline(steps=[
     ('imputer', SimpleImputer(strategy='median')),
-    ('scaler', StandardScaler())])) for f in numerical]
+    ('scaler', StandardScaler())])
 
-categorical_transformations = [([f], OneHotEncoder(handle_unknown='ignore', sparse=False)) for f in categorical]
+categorical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
+    ('onehot', OneHotEncoder(handle_unknown='ignore'))])
 
-transformations = numeric_transformations + categorical_transformations
+transformations = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, numerical),
+        ('cat', categorical_transformer, categorical)])
 
 # append classifier to preprocessing pipeline
-clf = Pipeline(steps=[('preprocessor', DataFrameMapper(transformations)),
+clf = Pipeline(steps=[('preprocessor', transformations),
                       ('classifier', LogisticRegression(solver='lbfgs'))])
 
 # get the run this was submitted from to interact with run history
@@ -99,7 +105,8 @@ with open(model_file_name, 'wb') as file:
 
 # register the model with the model management service for later use
 run.upload_file('original_model.pkl', os.path.join(OUTPUT_DIR, model_file_name))
-original_model = run.register_model(model_name='original_model', model_path='original_model.pkl')
+original_model = run.register_model(model_name='amlcompute_deploy_model',
+                                    model_path='original_model.pkl')
 
 # create an explainer to validate or debug the model
 tabular_explainer = TabularExplainer(model,
@@ -115,7 +122,7 @@ global_explanation = tabular_explainer.explain_global(x_test)
 
 # uploading model explanation data for storage or visualization
 comment = 'Global explanation on classification model trained on IBM employee attrition dataset'
-client.upload_model_explanation(global_explanation, comment=comment)
+client.upload_model_explanation(global_explanation, comment=comment, model_id=original_model.id)
 
 # also create a lightweight explainer for scoring time
 scoring_explainer = LinearScoringExplainer(tabular_explainer)

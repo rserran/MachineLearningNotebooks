@@ -2,8 +2,10 @@ name: nyc-taxi-data-regression-model-building
 dependencies:
 - pip:
   - azureml-sdk
+  - certifi
   - azureml-widgets
   - azureml-opendatasets
-  - azureml-dataprep
   - azureml-train-automl
   - matplotlib
+  - pandas
+  - pyarrow

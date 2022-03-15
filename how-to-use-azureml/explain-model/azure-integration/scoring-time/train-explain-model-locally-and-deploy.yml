@@ -2,6 +2,13 @@ name: train-explain-model-locally-and-deploy
 dependencies:
 - pip:
   - azureml-sdk
-  - azureml-explain-model
-  - azureml-contrib-explain-model
-  - sklearn-pandas
+  - azureml-interpret
+  - flask
+  - flask-cors
+  - gevent>=1.3.6
+  - jinja2
+  - ipython
+  - matplotlib
+  - ipywidgets
+  - raiwidgets~=0.17.0
+  - packaging>=20.9
