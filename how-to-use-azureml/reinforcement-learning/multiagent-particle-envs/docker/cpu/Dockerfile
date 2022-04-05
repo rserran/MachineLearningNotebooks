@@ -1,36 +1,7 @@
-FROM mcr.microsoft.com/azureml/base:openmpi3.1.2-ubuntu18.04
-
-# Install some basic utilities
-RUN apt-get update && apt-get install -y \
-    curl \
-    ca-certificates \
-    sudo \
-	cpio \
-    git \
-    bzip2 \
-    libx11-6 \
-    tmux \
-    htop \
-    gcc \
-    xvfb \
-    python-opengl \
-    x11-xserver-utils \
-    ffmpeg \
-    mesa-utils \
-    nano \
-    vim \
-    rsync \
- && rm -rf /var/lib/apt/lists/*
-
-# Install python 3.7
-RUN conda install python==3.7 
-
-# Create a working directory
-RUN mkdir /app
-WORKDIR /app
+FROM akdmsft/particle-cpu
 
 # Install required pip packages
-RUN pip install --upgrade pip setuptools && pip install --upgrade \
+RUN pip3 install --upgrade pip setuptools && pip3 install --upgrade \
     pandas \
     matplotlib \
     psutil \
@@ -43,18 +14,19 @@ RUN pip install --upgrade pip setuptools && pip install --upgrade \
     tensorflow-probability==0.8.0 \
     onnxruntime \
     tf2onnx \
-    cloudpickle==1.2.0 \
+    cloudpickle==1.1.1 \
     tabulate \
     dm_tree \
     lz4 \
-    opencv-python \
-    ray==0.8.3 \
-    ray[rllib]==0.8.3 \
-    ray[tune]==0.8.3
+    opencv-python
 
-# Install particle
-RUN git clone https://github.com/openai/multiagent-particle-envs.git
-COPY patch_files/* multiagent-particle-envs/multiagent/
 RUN cd multiagent-particle-envs && \
-    pip install -e . && \
-    pip install --upgrade pyglet==1.3.2
+    pip3 install -e . && \
+    pip3 install --upgrade pyglet==1.3.2
+
+RUN pip3 install ray-on-aml==0.1.6
+
+RUN pip3 install --upgrade \
+    ray==0.8.7 \
+    ray[rllib]==0.8.7 \
+    ray[tune]==0.8.7
